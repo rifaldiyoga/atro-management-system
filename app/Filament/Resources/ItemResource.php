@@ -98,9 +98,11 @@ class ItemResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('code')
                     ->label('Kode Produk')
+                    ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Produk')
+                    ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('price')
                     ->label('Harga')
@@ -112,12 +114,10 @@ class ItemResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat pada')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Diperbarui pada')
                     ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([

@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
         // Membuat pengguna admin default
         User::create([
             'name' => 'Admin',
-            'email' => 'admin@admin .com',
+            'email' => 'admin@admin.com',
             'email_verified_at' => now(),
             'password' => Hash::make('admin'), // Ganti dengan password yang aman
             'remember_token' => \Illuminate\Support\Str::random(10),

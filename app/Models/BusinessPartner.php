@@ -18,6 +18,7 @@ class BusinessPartner extends Model
         'code',
         'name',
         'phone',
+        'email',
         'photo_url',
         'partner_type',
         'description',
@@ -35,7 +36,7 @@ class BusinessPartner extends Model
     {
         static::creating(function ($businessPartner) {
             // Check if code is already set to avoid overwriting it
-            if (empty($businessPartner->code)) {
+            if (empty($businessPartner->code) || $businessPartner->code === 'AUTO') {
                 $businessPartner->code = static::generateCode();
             }
         });
@@ -49,18 +50,18 @@ class BusinessPartner extends Model
      */
     public static function generateCode(): string
     {
-        // Find the business partner with the highest code to determine the next number.
-        $lastPartner = self::orderBy('id', 'desc')->first();
+        // Find the business partner with the highest numeric code
+        $lastPartner = self::orderBy('code', 'desc')
+            ->first();
+
 
         $nextNumber = 1; // Default to 1 if no partners exist yet.
 
-        if ($lastPartner) {
-            // We get the last ID and increment it. This is safer than using the 'code' field
-            // to avoid potential issues if a code is ever manually changed to a non-numeric value.
-            $nextNumber = $lastPartner->id + 1;
+        if ($lastPartner && is_numeric($lastPartner->code)) {
+            $nextNumber = intval($lastPartner->code) + 1;
         }
 
         // Format the number with leading zeros to a total length of 6.
-        return str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        return str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
     }
 }

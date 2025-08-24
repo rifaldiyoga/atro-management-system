@@ -33,9 +33,9 @@ class CreateOrder extends CreateRecord
                     'trxdate' => $offerRequest->trxdate,
                     'notes' => $offerRequest->notes,
                     'ph_no' => $offerRequest->ph_no,
-                    'po_no' => 'AUTO',
                     'rfq_number' => $offerRequest->rfq_number,
                     'rfq_duration' => $offerRequest->rfq_duration, // Menambahkan lampiran jika ada
+                    'salesman_id' => $offerRequest->salesman_id,
                 ];
 
                 // Menyiapkan data untuk repeater 'items'
@@ -51,9 +51,10 @@ class CreateOrder extends CreateRecord
                     ];
                 }
 
-                $data['items'] = $itemsData;
+                $data['repeater'] = [
+                    'items' => $itemsData
+                ];
 
-                // Mengisi form dengan data yang sudah disiapkan
                 $this->form->fill($data);
             }
         }

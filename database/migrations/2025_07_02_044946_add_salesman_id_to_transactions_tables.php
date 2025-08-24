@@ -13,12 +13,12 @@ return new class extends Migration
     {
         // Menambahkan kolom salesman_id ke tabel offer_requests
         Schema::table('offer_requests', function (Blueprint $table) {
-            $table->foreignId('salesman_id')->nullable()->after('customer_id')->constrained('salesman')->onDelete('set null');
+            $table->foreignId('salesman_id')->nullable()->after('customer_id')->onDelete('set null');
         });
 
         // Menambahkan kolom salesman_id ke tabel orders
         Schema::table('orders', function (Blueprint $table) {
-            $table->foreignId('salesman_id')->nullable()->after('customer_id')->constrained('salesman')->onDelete('set null');
+            $table->foreignId('salesman_id')->nullable()->after('customer_id')->onDelete('set null');
         });
     }
 

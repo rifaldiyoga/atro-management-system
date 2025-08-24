@@ -66,7 +66,9 @@ class BusinessPartnerResource extends Resource
                                         ->tel()
                                         ->columnSpan(3),
 
-
+                                    Forms\Components\TextInput::make('email')
+                                        ->label('Email')
+                                        ->columnSpan(3),
 
                                     Forms\Components\Textarea::make('address')
                                         ->label('Alamat')->columnSpan(4),
@@ -113,6 +115,7 @@ class BusinessPartnerResource extends Resource
                 Tables\Columns\TextColumn::make('phone')
                     ->searchable(),
                 Tables\Columns\IconColumn::make('is_active')
+                    ->label('Aktif')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

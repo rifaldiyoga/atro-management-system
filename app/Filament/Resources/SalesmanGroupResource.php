@@ -13,7 +13,7 @@ class SalesmanGroupResource extends Resource
 {
     protected static ?string $model = SalesmanGroup::class;
 
-    protected static ?string $navigationGroup = 'Sales Management';
+    protected static ?string $navigationGroup = 'Master';
     protected static ?string $navigationLabel = 'Grup Salesmen';
     protected static ?string $pluralModelLabel = 'Grup Salesmen';
     protected static ?string $modelLabel = 'Grup Salesmen';

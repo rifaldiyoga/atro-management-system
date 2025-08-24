@@ -15,7 +15,7 @@ class SalesmanResource extends Resource
 {
     protected static ?string $model = Salesman::class;
 
-    protected static ?string $navigationGroup = 'Sales Management';
+    protected static ?string $navigationGroup = 'Master';
 
     protected static ?string $navigationIcon = 'heroicon-o-user';
     protected static ?string $navigationLabel = 'Salesmen';

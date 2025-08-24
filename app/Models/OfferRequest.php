@@ -23,13 +23,15 @@ class OfferRequest extends Model
         'rfq_number',
         'rfq_duration',
         'notes',
+        'ph_no',
         'trx_no',
         'salesman_id',
+        'status',
+        'trxdate',
     ];
 
     protected $casts = [
         'attachment' => 'array',
-        'trxdate' => 'date',
     ];
 
     protected static function booted()
@@ -57,17 +59,17 @@ class OfferRequest extends Model
         $currentMonth = $now->format('m');
         $prefix = 'PH/AIG';
 
-        // Find the last offer request created in the current month and year
+        // Find the last offer request created in the current year
         $lastOffer = self::whereYear('created_at', $currentYear)
-            ->whereMonth('created_at', $currentMonth)
             ->latest('id') // Use the latest ID to be certain
+            ->orderBy('ph_no', 'desc')
             ->first();
 
-        $increment = 1; // Default to 1 for the first entry of the month
+        $increment = 1; // Default to 1 for the first entry of the year
 
-        if ($lastOffer && $lastOffer->trx_no) {
-            // If a previous record exists for this month, parse its trx_no
-            $parts = explode('/', $lastOffer->trx_no);
+        if ($lastOffer && $lastOffer->ph_no) {
+            // If a previous record exists for this year, parse its trx_no
+            $parts = explode('/', $lastOffer->ph_no);
             $lastIncrement = (int) $parts[0];
             $increment = $lastIncrement + 1;
         }
@@ -87,8 +89,8 @@ class OfferRequest extends Model
         return $this->hasMany(OfferRequestItem::class);
     }
 
-    public function salesman()
+    public function salesmanGroup()
     {
-        return $this->belongsTo(SalesmanGroup::class);
+        return $this->belongsTo(SalesmanGroup::class, 'salesman_id');
     }
 }

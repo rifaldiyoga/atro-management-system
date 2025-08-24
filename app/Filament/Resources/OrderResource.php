@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\OrderResource\Pages;
 use App\Filament\Resources\OrderResource\RelationManagers;
+use App\Models\Item;
 use App\Models\Order;
 use App\Models\SalesmanGroup;
 use Awcodes\TableRepeater\Components\TableRepeater;
@@ -24,6 +25,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\View;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -59,7 +61,7 @@ class OrderResource extends Resource
                                 ->searchable()
                                 ->required(),
                             DatePicker::make('trxdate')->label('Tanggal')->required()->default(Carbon::now()),
-                            TextInput::make('po_no')->label('No. Purchase Order')->required()->disabled()->default('AUTO'),
+                            TextInput::make('po_no')->label('No. Purchase Order')->required(),
 
 
                             TextInput::make('ph_no')->label('No. Penawaran Harga'),
@@ -83,73 +85,112 @@ class OrderResource extends Resource
 
                         ]),
 
-                        TableRepeater::make('items')
-                            ->relationship()
-                            ->columnSpanFull()
-                            ->default([])
-                            ->label('')
-                            ->headers([
-                                Header::make('Item')->width('200px'),
-                                Header::make('Qty')->width('100px'),
-                                Header::make('Harga Beli')->width('200px'),
-                                Header::make('Harga Jual')->width('200px'),
-                                Header::make('Diskon')->width('100px'),
-                                Header::make('Supplier')->width('150px'),
-                            ])
-                            ->schema([
-                                Select::make('item_id')
-                                    ->label('Nama')
-                                    ->relationship('item', 'name')
-                                    ->searchable()
-                                    ->placeholder('Pilih Item')
-                                    ->required(),
-
-                                TextInput::make('quantity')
-                                    ->label('Qty')
-                                    ->numeric()
-                                    ->required(),
-
-                                TextInput::make('purchase_price')
-                                    ->label('Harga Beli')
-                                    ->numeric()
-                                    ->required(),
-
-                                TextInput::make('selling_price')
-                                    ->label('Harga Jual')
-                                    ->numeric()
-                                    ->required(),
-
-                                TextInput::make('discount')
-                                    ->label('Diskon')
-                                    ->numeric()
-                                    ->nullable(),
-
-                                Select::make('supplier_id')
-                                    ->label('Supplier')
-                                    ->placeholder('Pilih Supplier')
-                                    // Menambahkan query untuk memfilter berdasarkan partner_type
-                                    ->relationship(
-                                        name: 'supplier',
-                                        titleAttribute: 'name',
-                                        // Menghapus type hint Builder untuk memperbaiki error
-                                        modifyQueryUsing: fn($query) => $query->where('partner_type', 'supplier')
-                                    )
-                                    ->searchable()
-                                    ->required(),
-
-                                // Textarea::make('dnotes')
-                                //     ->label('Keterangan')
-                                //     ->rows(1),
-
-                                // FileUpload::make('attachment')
-                                //     ->label('Attachment')
-                                //     ->disk('public') // adjust disk as needed
-                                //     ->directory('attachments')
-                                //     ->preserveFilenames()
-                                //     ->nullable(),
-
-                            ])
-                            ->addActionLabel('Add Item'),
+                        Forms\Components\Group::make([
+                            TableRepeater::make('items')
+                                ->label('')
+                                ->relationship()
+                                ->columnSpan('full')
+                                ->headers([
+                                    Header::make('Item')->width('200px')->markAsRequired(),
+                                    Header::make('Qty')->width('100px')->markAsRequired(),
+                                    Header::make('Harga Beli')->width('200px')->markAsRequired(),
+                                    Header::make('Harga Jual')->width('200px')->markAsRequired(),
+                                    Header::make('Diskon')->width('100px'),
+                                    Header::make('Supplier')->width('150px')->markAsRequired(),
+                                ])
+                                ->addActionLabel('Tambah Item')
+                                ->addable(function (Forms\Get $get) {
+                                    $items = $get('items');
+                                    if (empty($items)) {
+                                        return true;
+                                    }
+                                    $lastItem = end($items);
+                                    return !blank($lastItem['item_id']);
+                                })
+                                ->schema([
+                                    Select::make('item_id')
+                                        ->label('Product')
+                                        ->searchable()
+                                        ->required()
+                                        ->relationship('item', 'name')
+                                        ->placeholder('Pilih Item')
+                                        ->live() // Membuat field ini reaktif
+                                        ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                            $item = Item::find($state);
+                                            if ($item) {
+                                                $purchasePrice = $item->price;
+                                                $sellingPrice = $purchasePrice * 1.70;
+                                                // Format with thousands separator
+                                                $set('purchase_price', number_format($purchasePrice, 0, '', ','));
+                                                $set('selling_price', number_format($sellingPrice, 0, '', ','));
+                                            } else {
+                                                // Kosongkan harga jika item tidak dipilih
+                                                $set('purchase_price', null);
+                                                $set('selling_price', null);
+                                            }
+                                        }),
+                                    TextInput::make('quantity')
+                                        ->label('Qty')
+                                        ->numeric()
+                                        ->required()
+                                        ->default(1)
+                                        ->disabled(fn(Forms\Get $get): bool => blank($get('item_id'))),
+                                    TextInput::make('purchase_price')
+                                        ->label('Purchase Price')
+                                        ->numeric()
+                                        ->required()
+                                        ->mask(RawJs::make('$money($input)'))
+                                        ->stripCharacters(',')
+                                        ->live() // Mengubah dari onBlur menjadi onChange
+                                        ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                            // Remove separator (comma) before calculation
+                                            $cleanState = str_replace(',', '', $state);
+                                            $sellingPrice = (float)$cleanState * 1.70;
+                                            // Format selling price with thousands separator
+                                            $set('selling_price', number_format($sellingPrice, 0, '', ','));
+                                        })
+                                        ->disabled(fn(Forms\Get $get): bool => blank($get('item_id'))),
+                                    TextInput::make('selling_price')
+                                        ->label('Selling Price')
+                                        ->numeric()
+                                        ->mask(RawJs::make('$money($input)'))
+                                        ->stripCharacters(',')
+                                        ->required()
+                                        ->disabled(fn(Forms\Get $get): bool => blank($get('item_id'))),
+                                    TextInput::make('discount')
+                                        ->label('Discount')
+                                        ->numeric()
+                                        ->nullable()
+                                        ->disabled(fn(Forms\Get $get): bool => blank($get('item_id'))),
+                                    Select::make('supplier_id')
+                                        ->label('Supplier')
+                                        ->placeholder('Pilih Supplier')
+                                        ->relationship(
+                                            name: 'supplier',
+                                            titleAttribute: 'name',
+                                            modifyQueryUsing: fn($query) => $query->where('partner_type', 'supplier')
+                                        )
+                                        ->searchable()
+                                        ->required()
+                                        ->disabled(fn(Forms\Get $get): bool => blank($get('item_id'))),
+                                ])
+                                ->columnSpan('full'),
+                            // Add subtotal placeholder below the TableRepeater
+                            Forms\Components\Placeholder::make('subtotal')
+                                ->label('Subtotal')
+                                ->content(function (\Filament\Forms\Get $get) {
+                                    $items = $get('items') ?? [];
+                                    $subtotal = 0;
+                                    foreach ($items as $item) {
+                                        $qty = isset($item['quantity']) ? (float)$item['quantity'] : 0;
+                                        $price = isset($item['selling_price']) ? (float)str_replace(',', '', $item['selling_price']) : 0;
+                                        $discount = isset($item['discount']) ? (float)$item['discount'] : 0;
+                                        $subtotal += ($qty * $price) - $discount;
+                                    }
+                                    return number_format($subtotal, 0, ',', '.');
+                                })
+                                ->columnSpan('full'),
+                        ]),
 
                         Grid::make(4)->schema([
                             Textarea::make('notes')
@@ -170,9 +211,6 @@ class OrderResource extends Resource
                         ])
                     ]),
 
-
-
-
             ]);
     }
 
@@ -184,10 +222,6 @@ class OrderResource extends Resource
                     ->label('No. PO')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('phd')
-                    ->label('Harga & Delivery')
-                    ->numeric()
-                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('customer.name') // Better to show customer name instead of ID
                     ->label('Customer')
@@ -196,7 +230,7 @@ class OrderResource extends Resource
 
                 Tables\Columns\TextColumn::make('trxdate')
                     ->label('Tanggal')
-                    ->date()
+                    ->date('d M Y')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('rfq_number')
@@ -220,7 +254,16 @@ class OrderResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\Filter::make('trxdate')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('from')->label('Dari Tanggal'),
+                        \Filament\Forms\Components\DatePicker::make('until')->label('Sampai Tanggal'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when($data['from'], fn($q, $date) => $q->whereDate('trxdate', '>=', $date))
+                            ->when($data['until'], fn($q, $date) => $q->whereDate('trxdate', '<=', $date));
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

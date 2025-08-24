@@ -2,26 +2,25 @@
 
 namespace App\Filament\Resources;
 
-use App\Models\OrderItem;
+use App\Models\OfferRequestItem;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
-use App\Filament\Resources\OrderItemResource\Pages;
+use App\Filament\Resources\OfferRequestItemResource\Pages;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 
-class OrderItemResource extends Resource
+class OfferRequestItemResource extends Resource
 {
-    protected static ?string $model = OrderItem::class;
-
+    protected static ?string $model = OfferRequestItem::class;
 
     protected static ?string $navigationGroup = 'Laporan';
-    protected static ?string $navigationLabel = 'Riwayat Order Per Item';
+    protected static ?string $navigationLabel = 'Riwayat Penawaran Per Item';
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $pluralModelLabel = 'Riwayat Order Per Item';
+    protected static ?string $pluralModelLabel = 'Riwayat Penawaran Per Item';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -48,9 +47,9 @@ class OrderItemResource extends Resource
         return $table
             ->columns([
 
-                Tables\Columns\TextColumn::make('order.po_no')
-                    ->label('No. Purchase Order')
-                    ->url(fn($record) => $record->order ? route('filament.admin.resources.orders.edit', $record->order) : null)
+                Tables\Columns\TextColumn::make('offerRequest.ph_no')
+                    ->label('No. Penawaran')
+                    ->url(fn($record) => $record->offerRequest ? route('filament.admin.resources.offer-requests.edit', $record->offerRequest) : null)
                     ->openUrlInNewTab()
                     ->color('primary'),
                 Tables\Columns\TextColumn::make('item.code')
@@ -62,19 +61,15 @@ class OrderItemResource extends Resource
                 Tables\Columns\TextColumn::make('quantity')->label('Qty'),
                 Tables\Columns\TextColumn::make('selling_price')->money('IDR', true)->label('Selling'),
                 Tables\Columns\TextColumn::make('purchase_price')->money('IDR', true)->label('Purchase'),
+                Tables\Columns\TextColumn::make('discount')->label('Discount'),
 
                 Tables\Columns\TextColumn::make('supplier.name')->label('Supplier'),
 
-                // Order Details
-                Tables\Columns\TextColumn::make('order.ph_no')
-                    ->label('No. Penawaran Harga')
-                    ->url(fn($record) => $record->order ? route('filament.admin.resources.offer-requests.edit', $record->order) : null)
-                    ->openUrlInNewTab()
-                    ->color('primary'),
-                Tables\Columns\TextColumn::make('order.phd')->label('PHD'),
-                Tables\Columns\TextColumn::make('order.customer.name')->label('Customer'),
-                Tables\Columns\TextColumn::make('order.trxdate')->date()->label('Order Date'),
-
+                // Offer Request Details
+                Tables\Columns\TextColumn::make('offerRequest.rfq_number')->label('No. RFQ'),
+                Tables\Columns\TextColumn::make('offerRequest.customer.name')->label('Customer'),
+                Tables\Columns\TextColumn::make('offerRequest.trxdate')->date()->label('Tanggal Penawaran'),
+                Tables\Columns\TextColumn::make('offerRequest.status')->label('Status'),
             ])
             ->filters([
                 // 🔍 Filter by Product
@@ -96,10 +91,10 @@ class OrderItemResource extends Resource
                         );
                     }),
 
-                // 📄 Filter by PO No
-                Filter::make('po_no')
+                // 📄 Filter by No. Penawaran
+                Filter::make('ph_no')
                     ->form([
-                        TextInput::make('value')->label('No. Purchase Order'),
+                        TextInput::make('value')->label('No. Penawaran'),
                     ])
                     ->query(function ($query, array $data) {
                         return $query->when(
@@ -107,9 +102,9 @@ class OrderItemResource extends Resource
                             function ($q, $value) {
                                 $driver = $q->getModel()->getConnection()->getDriverName();
                                 if ($driver === 'pgsql') {
-                                    return $q->whereHas('order', fn($q2) => $q2->where('po_no', 'ILIKE', "%{$value}%"));
+                                    return $q->whereHas('offerRequest', fn($q2) => $q2->where('ph_no', 'ILIKE', "%{$value}%"));
                                 } else {
-                                    return $q->whereHas('order', fn($q2) => $q2->where('po_no', 'LIKE', "%{$value}%"));
+                                    return $q->whereHas('offerRequest', fn($q2) => $q2->where('ph_no', 'LIKE', "%{$value}%"));
                                 }
                             }
                         );
@@ -122,24 +117,35 @@ class OrderItemResource extends Resource
                     ->relationship('supplier', 'name')
                     ->searchable(),
 
-                // 👤 Filter by Customer (via order relation)
-                SelectFilter::make('order.customer_id')
+                // 👤 Filter by Customer (via offer request relation)
+                SelectFilter::make('offerRequest.customer_id')
                     ->label('Customer')
                     ->multiple()
-                    ->relationship('order.customer', 'name')
+                    ->relationship('offerRequest.customer', 'name')
                     ->searchable(),
 
-                // 📅 Filter by Order Date Range
-                Filter::make('order_date')
+                // 📅 Filter by Offer Request Date Range
+                Filter::make('offer_request_date')
                     ->form([
                         DatePicker::make('from')->label('From Date'),
                         DatePicker::make('until')->label('To Date'),
                     ])
                     ->query(function ($query, array $data) {
                         return $query
-                            ->when($data['from'], fn($q, $date) => $q->whereHas('order', fn($q2) => $q2->whereDate('trxdate', '>=', $date)))
-                            ->when($data['until'], fn($q, $date) => $q->whereHas('order', fn($q2) => $q2->whereDate('trxdate', '<=', $date)));
+                            ->when($data['from'], fn($q, $date) => $q->whereHas('offerRequest', fn($q2) => $q2->whereDate('trxdate', '>=', $date)))
+                            ->when($data['until'], fn($q, $date) => $q->whereHas('offerRequest', fn($q2) => $q2->whereDate('trxdate', '<=', $date)));
                     }),
+
+                // 🏷️ Filter by Status
+                SelectFilter::make('offerRequest.status')
+                    ->label('Status')
+                    ->multiple()
+                    ->options([
+                        'draft' => 'Draft',
+                        'submitted' => 'Submitted',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ]),
             ])
             ->actions([]) // Removes View/Edit/Delete buttons
             ->bulkActions([]); // Removes checkboxes & bulk actions
@@ -148,7 +154,7 @@ class OrderItemResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListOrderItems::route('/'),
+            'index' => Pages\ListOfferRequestItems::route('/'),
         ];
     }
 }
