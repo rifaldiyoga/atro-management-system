@@ -8,22 +8,30 @@ class CreateBusinessPartnersTable extends Migration
 {
     public function up(): void
     {
-        Schema::create('business_partners', function (Blueprint $table) {
+        Schema::create('bp', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique();
             $table->string('name');
-            $table->string('phone')->nullable();
-            $table->text('photo_url')->nullable();
-            $table->enum('partner_type', ['customer', 'supplier']);
-            $table->text('description')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->text('address')->nullable();
-            $table->timestamps();
+            $table->bigInteger('version')->nullable();
+            $table->string('bankname')->nullable();
+            $table->string('bankaccno')->nullable();
+            $table->string('bankaccname')->nullable();
+            $table->string('email')->nullable();
+            $table->string('website')->nullable();
+            $table->text('note')->nullable();
+            $table->boolean('active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->string('cmpname')->nullable();
+            $table->enum('bptype', ['CUST', 'VEND']);
+
+            $table->timestampsTz();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('business_partners');
+        Schema::dropIfExists('bp');
     }
 }
+

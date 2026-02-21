@@ -9,11 +9,11 @@ class SalesmanGroup extends Model
 {
     use HasFactory;
 
-    protected $table = 'salesman_groups';
+    protected $table = 'srepgrp';
     protected $fillable = ['name'];
 
     public function salesmen()
     {
-        return $this->hasMany(Salesman::class, 'salesman_group_id');
+        return $this->hasMany(Salesman::class, 'srepgrp_id');
     }
 }

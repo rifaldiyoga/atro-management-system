@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Salesman;
 use App\Models\SalesmanGroup;
 use Illuminate\Http\Request;
 
@@ -10,74 +11,75 @@ class SalesmanGroupController extends Controller
 {
     public function index()
     {
-        $perPage = request()->query('per_page', 10);
-        $search = request()->query('search');
-        $sort = request()->query('sort', 'id');
+        $perPage   = request()->query('per_page', 10);
+        $search    = request()->query('search');
+        $sort      = request()->query('sort', 'id');
         $direction = request()->query('direction', 'asc');
 
-        $query = SalesmanGroup::query();
+        $query = SalesmanGroup::withCount('salesmen');
 
         if ($search) {
             $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
         }
 
-        // Validate sort field
         $allowedSortFields = ['id', 'name', 'created_at'];
         if (!in_array($sort, $allowedSortFields)) {
             $sort = 'id';
         }
 
-        // Validate direction
         $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
 
         $groups = $query->orderBy($sort, $direction)->paginate($perPage);
+
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Salesman group list fetched successfully',
-            'data' => $groups->items(),
-            'meta' => [
+            'data'    => $groups->items(),
+            'meta'    => [
                 'current_page' => $groups->currentPage(),
-                'last_page' => $groups->lastPage(),
-                'per_page' => $groups->perPage(),
-                'total' => $groups->total(),
-                'sort' => $sort,
-                'direction' => $direction,
+                'last_page'    => $groups->lastPage(),
+                'per_page'     => $groups->perPage(),
+                'total'        => $groups->total(),
+                'sort'         => $sort,
+                'direction'    => $direction,
             ]
         ], 200);
     }
 
     public function show($id)
     {
-        $group = SalesmanGroup::find($id);
+        $group = SalesmanGroup::with('salesmen')->find($id);
         if (!$group) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Salesman group not found',
-                'data' => null
+                'data'    => null
             ], 404);
         }
+
         return response()->json([
-            'status' => 'success',
+            'status'  => 'success',
             'message' => 'Salesman group fetched successfully',
-            'data' => $group
+            'data'    => $group
         ], 200);
     }
 
     public function store(Request $request)
     {
         try {
-            $group = SalesmanGroup::create($request->all());
+            $group = SalesmanGroup::create($request->only(['name']));
+
             return response()->json([
-                'status' => 'success',
+                'status'  => 'success',
                 'message' => 'Salesman group created successfully',
-                'data' => $group
+                'data'    => $group
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Failed to create salesman group',
-                'data' => null,
-                'error' => $e->getMessage()
+                'data'    => null,
+                'error'   => $e->getMessage()
             ], 400);
         }
     }
@@ -87,24 +89,26 @@ class SalesmanGroupController extends Controller
         $group = SalesmanGroup::find($id);
         if (!$group) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Salesman group not found',
-                'data' => null
+                'data'    => null
             ], 404);
         }
+
         try {
-            $group->update($request->all());
+            $group->update($request->only(['name']));
+
             return response()->json([
-                'status' => 'success',
+                'status'  => 'success',
                 'message' => 'Salesman group updated successfully',
-                'data' => $group
+                'data'    => $group
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Failed to update salesman group',
-                'data' => null,
-                'error' => $e->getMessage()
+                'data'    => null,
+                'error'   => $e->getMessage()
             ], 400);
         }
     }
@@ -114,24 +118,35 @@ class SalesmanGroupController extends Controller
         $group = SalesmanGroup::find($id);
         if (!$group) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Salesman group not found',
-                'data' => null
+                'data'    => null
             ], 404);
         }
+
+        $hasSalesmen = Salesman::where('srepgrp_id', $group->id)->exists();
+
+        if ($hasSalesmen) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Cannot delete salesman group that still has salesmen assigned to it.',
+                'data'    => null
+            ], 422);
+        }
+
         try {
             $group->delete();
+
             return response()->json([
-                'status' => 'success',
-                'message' => 'Salesman group deleted successfully',
-                'data' => null
-            ], 204);
+                'status'  => 'success',
+                'message' => 'Salesman group deleted successfully'
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Failed to delete salesman group',
-                'data' => null,
-                'error' => $e->getMessage()
+                'data'    => null,
+                'error'   => $e->getMessage()
             ], 400);
         }
     }

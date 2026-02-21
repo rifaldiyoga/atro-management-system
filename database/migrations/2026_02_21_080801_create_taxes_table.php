@@ -11,16 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Mengubah nama tabel dari 'salesmen' menjadi 'salesman'
-        Schema::create('srep', function (Blueprint $table) {
-            $table->id();
+        Schema::create('tax', function (Blueprint $table) {
+            $table->string('code')->primary();
             $table->string('name');
-            $table->string('code')->unique();
-            $table->string('phone')->nullable();
-            $table->string('email')->nullable();
-
+            $table->string('expr');
             $table->boolean('active')->default(true);
-            $table->foreignId('srepgrp_id')->nullable()->constrained('srepgrp')->onDelete('set null');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->boolean('isdefault')->default(false);
+            $table->string('calcdpp')->default('1')->nullable();
 
             $table->timestampsTz();
         });
@@ -31,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('srep');
+        Schema::dropIfExists('tax');
     }
 };

@@ -9,12 +9,16 @@ class Salesman extends Model
 {
     use HasFactory;
 
-    protected $table = 'salesman';
-    protected $fillable = ['name', 'code', 'phone', 'salesman_group_id'];
+    protected $table = 'srep';
+    protected $fillable = ['name', 'code', 'email', 'active', 'srepgrp_id'];
+
+    protected $casts = [
+        'active' => 'boolean',
+    ];
 
     public function salesmanGroup()
     {
-        return $this->belongsTo(SalesmanGroup::class, 'salesman_group_id');
+        return $this->belongsTo(SalesmanGroup::class, 'srepgrp_id');
     }
 
     protected static function booted()

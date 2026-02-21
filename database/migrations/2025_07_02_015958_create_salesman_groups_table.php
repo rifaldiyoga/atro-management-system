@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Mengubah nama tabel dari 'teams' menjadi 'salesman_groups'
-        Schema::create('salesman_groups', function (Blueprint $table) {
+        Schema::create('srepgrp', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->timestamps();
+            $table->timestampsTz();
         });
     }
 
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('salesman_groups');
+        Schema::dropIfExists('srepgrp');
     }
 };

@@ -4,59 +4,31 @@ namespace Database\Seeders;
 
 use App\Models\Salesman;
 use App\Models\SalesmanGroup;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
+use Faker\Factory as Faker;
 
 class SalesmanSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Kosongkan tabel untuk menghindari duplikasi data
         Salesman::truncate();
         SalesmanGroup::truncate();
 
-        // Buat grup salesman terlebih dahulu
-        $timA = SalesmanGroup::create(['name' => 'Tim A']);
-        $timB = SalesmanGroup::create(['name' => 'TIM B']);
+        $faker = Faker::create('id_ID');
 
-        // Buat data salesman dan kaitkan dengan grup yang sesuai
-        Salesman::create([
-            'name' => 'WAHYU',
-            'code' => '000001',
-            'phone' => '123',
-            'salesman_group_id' => $timA->id,
-        ]);
+        $groupA = SalesmanGroup::create(['name' => 'Group A']);
+        $groupB = SalesmanGroup::create(['name' => 'Group B']);
 
-        Salesman::create([
-            'name' => 'SONI',
-            'code' => '000003',
-            'phone' => '789',
-            'salesman_group_id' => $timA->id,
-        ]);
+        $salesmen = [
+            ['name' => 'WAHYU',  'code' => '000001', 'email' => 'wahyu@example.com',  'srepgrp_id' => $groupA->id],
+            ['name' => 'SONI',   'code' => '000002', 'email' => 'soni@example.com',   'srepgrp_id' => $groupA->id],
+            ['name' => 'FANY',   'code' => '000003', 'email' => 'fany@example.com',   'srepgrp_id' => $groupB->id],
+            ['name' => 'HENDRI', 'code' => '000004', 'email' => 'hendri@example.com', 'srepgrp_id' => $groupB->id],
+            ['name' => 'RONI',   'code' => '000005', 'email' => 'roni@example.com',   'srepgrp_id' => $groupB->id],
+        ];
 
-        Salesman::create([
-            'name' => 'FANY',
-            'code' => '000004',
-            'phone' => '456',
-            'salesman_group_id' => $timB->id,
-        ]);
-
-        Salesman::create([
-            'name' => 'HENDRI',
-            'code' => '000005',
-            'phone' => '321',
-            'salesman_group_id' => $timB->id,
-        ]);
-
-        Salesman::create([
-            'name' => 'RONI',
-            'code' => '000006',
-            'phone' => '654',
-            'salesman_group_id' => $timB->id,
-        ]);
+        foreach ($salesmen as $data) {
+            Salesman::create(array_merge($data, ['active' => true]));
+        }
     }
 }

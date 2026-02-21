@@ -17,11 +17,20 @@ class Item extends Model
     protected $fillable = [
         'code',
         'name',
+        'taxcode',
         'unit',
         'price',
+        'discexp',
+        'lastpurcprice',
         'description',
-        'is_active',
+        'active',
         'photo_url',
+    ];
+
+    protected $casts = [
+        'active' => 'boolean',
+        'price' => 'decimal:2',
+        'lastpurcprice' => 'decimal:2',
     ];
 
     /**
@@ -63,12 +72,18 @@ class Item extends Model
         return str_pad($nextNumber, 9, '0', STR_PAD_LEFT);
     }
 
-    /**
-     * Get the order items associated with the item.
-     */
-    public function orderItems()
+    public function salesOrderDetails()
     {
-        // Assuming an OrderItem model exists
-        return $this->hasMany(OrderItem::class);
+        return $this->hasMany(SalesOrderDetail::class, 'item_id');
+    }
+
+    public function salesQuotationDetails()
+    {
+        return $this->hasMany(SalesQuotationDetail::class, 'item_id');
+    }
+
+    public function suppliers()
+    {
+        return $this->hasMany(ItemSupplier::class, 'item_id');
     }
 }

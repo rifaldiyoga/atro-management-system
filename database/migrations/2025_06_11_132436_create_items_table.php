@@ -15,23 +15,19 @@ return new class extends Migration
             $table->id();
             $table->string('code')->unique();
             $table->string('name');
-            // $table->string('unit_1')->default('PCS');
-            // $table->string('barcode_1')->nullable();
+            $table->string('taxcode')->nullable();
 
-            // Default units
-            $table->string('unit')->default('PCS');
+            $table->string('unit')->default('EA');
 
-            // Pricing
-            $table->decimal('price', 15, 2)->default(0.00); // Add price field here
-
+            $table->decimal('price', 15, 2)->default(0.00);
+            $table->string('discexp')->nullable();
+            $table->decimal('lastpurcprice', 15, 2)->default(0.00);
             $table->text('description')->nullable();
 
-            // Flags
-            $table->boolean('is_active')->default(true);
-
+            $table->boolean('active')->default(true);
             $table->longText('photo_url')->nullable();
 
-            $table->timestamps();
+            $table->timestampsTz();
         });
     }
 
