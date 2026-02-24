@@ -76,4 +76,9 @@ class SalesQuotation extends Model
     {
         return $this->hasMany(SalesQuotationDetail::class, 'sq_id', 'id');
     }
+
+    public function bp()
+    {
+        return $this->belongsTo(BusinessPartner::class, 'bp_id', 'id');
+    }
 }

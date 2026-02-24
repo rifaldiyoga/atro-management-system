@@ -16,8 +16,7 @@ class SalesQuotationController extends Controller
         $search = request()->query('search');
         $sort = request()->query('sort', 'id');
         $direction = request()->query('direction', 'asc');
-
-        $query = SalesQuotation::query();
+        $query = SalesQuotation::with('bp');
 
         if ($search) {
             $query->where(function ($q) use ($search) {

@@ -13,7 +13,7 @@ class TaxSeeder extends Seeder
 
         $taxes = [
             [
-                'code'      => 'PPN11',
+                'code'      => 'PPN',
                 'name'      => 'PPN 11%',
                 'expr'      => '11%',
                 'active'    => true,
