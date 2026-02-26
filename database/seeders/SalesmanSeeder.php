@@ -13,22 +13,47 @@ class SalesmanSeeder extends Seeder
     {
         Salesman::truncate();
         SalesmanGroup::truncate();
-
         $faker = Faker::create('id_ID');
+        $grp = SalesmanGroup::create(['name' => 'Default Group']);
 
-        $groupA = SalesmanGroup::create(['name' => 'Group A']);
-        $groupB = SalesmanGroup::create(['name' => 'Group B']);
+        Salesman::create([
+            'name' => 'PAK SON',
+            'code' => '000003',
+            'email' => $faker->unique()->safeEmail,
+            'srepgrp_id' => $grp->id,
+            'active' => true,
+        ]);
 
-        $salesmen = [
-            ['name' => 'WAHYU',  'code' => '000001', 'email' => 'wahyu@example.com',  'srepgrp_id' => $groupA->id],
-            ['name' => 'SONI',   'code' => '000002', 'email' => 'soni@example.com',   'srepgrp_id' => $groupA->id],
-            ['name' => 'FANY',   'code' => '000003', 'email' => 'fany@example.com',   'srepgrp_id' => $groupB->id],
-            ['name' => 'HENDRI', 'code' => '000004', 'email' => 'hendri@example.com', 'srepgrp_id' => $groupB->id],
-            ['name' => 'RONI',   'code' => '000005', 'email' => 'roni@example.com',   'srepgrp_id' => $groupB->id],
-        ];
+        Salesman::create([
+            'name' => 'PAK FANY',
+            'code' => '000004',
+            'email' => $faker->unique()->safeEmail,
+            'srepgrp_id' => $grp->id,
+            'active' => true,
+        ]);
 
-        foreach ($salesmen as $data) {
-            Salesman::create(array_merge($data, ['active' => true]));
-        }
+        Salesman::create([
+            'name' => 'PAK HENDRI',
+            'code' => '000005',
+            'email' => $faker->unique()->safeEmail,
+            'srepgrp_id' => $grp->id,
+            'active' => true,
+        ]);
+
+        Salesman::create([
+            'name' => 'PAK RONI',
+            'code' => '000006',
+            'email' => $faker->unique()->safeEmail,
+            'srepgrp_id' => $grp->id,
+            'active' => true,
+        ]);
+
+        Salesman::create([
+            'name' => 'PAK WAHYU',
+            'code' => '000001',
+            'email' => $faker->unique()->safeEmail,
+            'srepgrp_id' => $grp->id,
+            'active' => true,
+        ]);
     }
 }
