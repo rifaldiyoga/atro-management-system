@@ -6,21 +6,19 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
-    public function run(): void
-    {
-        $this->call([
-            UserSeeder::class,            // users (no dependencies)
-            TaxSeeder::class,             // tax (no dependencies)
-            SalesmanSeeder::class,        // srepgrp → srep
-            BusinessPartnerSeeder::class, // bp
-            BpAddrSeeder::class,          // bpaddr → depends on bp
-            ItemSeeder::class,            // items
-            ItemSupplierSeeder::class,    // itemsupplier → depends on items + bp (VEND)
-            SalesQuotationSeeder::class,  // sq + sqd → depends on bp (CUST) + items + tax
-            SalesOrderSeeder::class,      // so + sod → depends on bp (CUST) + items + tax
-        ]);
-    }
+  /**
+   * Seed the application's database.
+   */
+  public function run(): void
+  {
+    $this->call([
+      UserSeeder::class,            // users (no dependencies)
+      TaxSeeder::class,             // tax (no dependencies)
+      SalesmanSeeder::class,        // srepgrp → srep
+      BusinessPartnerSeeder::class, // bp
+      BpAddrSeeder::class,          // bpaddr → depends on bp
+      ItemSeeder::class,            // items
+      ItemSupplierSeeder::class,    // itemsupplier → depends on items + bp (VEND)
+    ]);
+  }
 }

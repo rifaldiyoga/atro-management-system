@@ -11,13 +11,15 @@ return new class extends Migration
    */
   public function up(): void
   {
-    Schema::create('sqd', function (Blueprint $table) {
+    Schema::create('delid', function (Blueprint $table) {
       $table->id();
-      $table->unsignedBigInteger('sq_id');
+      $table->unsignedBigInteger('deli_id');
+      $table->unsignedBigInteger('sod_id')->nullable(); // reference to so detail line
       $table->smallInteger('dno');
       $table->unsignedBigInteger('item_id');
       $table->string('itemname');
-      $table->decimal('qty', 19, 4)->default(0);
+      $table->decimal('qty', 19, 4)->default(0);       // qty ordered
+      $table->decimal('qtydeli', 19, 4)->default(0);   // qty actually delivered
       $table->string('unit');
       $table->decimal('conv', 19, 4)->default(0);
       $table->decimal('qtyx', 19, 4)->default(0);
@@ -48,6 +50,6 @@ return new class extends Migration
    */
   public function down(): void
   {
-    Schema::dropIfExists('sqd');
+    Schema::dropIfExists('delid');
   }
 };

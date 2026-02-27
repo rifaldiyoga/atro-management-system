@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('reftype')->nullable();
             $table->unsignedBigInteger('refid')->nullable();
             $table->string('trxtype')->nullable();
-            $table->bigInteger('version');
+            $table->bigInteger('version')->default(1);
             $table->boolean('isdraft')->default(false);
             $table->boolean('isvoid')->default(false);
             $table->string('status')->nullable();

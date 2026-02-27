@@ -10,164 +10,177 @@ use Illuminate\Support\Facades\DB;
 
 class SalesOrderController extends Controller
 {
-    public function index()
-    {
-        $perPage = request()->query('per_page', 10);
-        $search = request()->query('search');
-        $sort = request()->query('sort', 'id');
-        $direction = request()->query('direction', 'asc');
+  public function index()
+  {
+    $perPage = request()->query('per_page', 10);
+    $search = request()->query('search');
+    $sort = request()->query('sort', 'id');
+    $direction = request()->query('direction', 'asc');
 
-        $query = SalesOrder::query();
+    $query = SalesOrder::with(['bp', 'srep']);
 
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->whereRaw('LOWER(trxno) LIKE ?', ['%' . strtolower($search) . '%']);
-            });
-        }
-
-        $allowedSortFields = ['id', 'trxno', 'trxdate', 'status', 'total', 'created_at'];
-        if (!in_array($sort, $allowedSortFields)) {
-            $sort = 'id';
-        }
-
-        $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-
-        $records = $query->orderBy($sort, $direction)->paginate($perPage);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Sales order list fetched successfully',
-            'data' => $records->items(),
-            'meta' => [
-                'current_page' => $records->currentPage(),
-                'last_page' => $records->lastPage(),
-                'per_page' => $records->perPage(),
-                'total' => $records->total(),
-                'sort' => $sort,
-                'direction' => $direction,
-            ]
-        ], 200);
+    if ($search) {
+      $query->where(function ($q) use ($search) {
+        $q->whereRaw('LOWER(trxno) LIKE ?', ['%' . strtolower($search) . '%']);
+      });
     }
 
-    public function show($id)
-    {
-        $record = SalesOrder::with('details')->find($id);
-        if (!$record) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Sales order not found',
-                'data' => null
-            ], 404);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Sales order fetched successfully',
-            'data' => $record
-        ], 200);
+    $allowedSortFields = ['id', 'trxno', 'trxdate', 'status', 'total', 'created_at'];
+    if (!in_array($sort, $allowedSortFields)) {
+      $sort = 'id';
     }
 
-    public function store(Request $request)
-    {
-        DB::beginTransaction();
-        try {
-            $data = $request->except('details');
-            $details = $request->input('details', []);
+    $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
 
-            $record = SalesOrder::create($data);
+    $records = $query->orderBy($sort, $direction)->paginate($perPage);
 
-            foreach ($details as $detail) {
-                $detail['so_id'] = $record->id;
-                SalesOrderDetail::create($detail);
-            }
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Sales order list fetched successfully',
+      'data' => $records->items(),
+      'meta' => [
+        'current_page' => $records->currentPage(),
+        'last_page' => $records->lastPage(),
+        'per_page' => $records->perPage(),
+        'total' => $records->total(),
+        'sort' => $sort,
+        'direction' => $direction,
+      ]
+    ], 200);
+  }
 
-            DB::commit();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Sales order created successfully',
-                'data' => $record->load('details')
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to create sales order',
-                'data' => null,
-                'error' => $e->getMessage()
-            ], 400);
-        }
+  public function show($id)
+  {
+    $record = SalesOrder::with(['details', 'bp', 'srep'])->find($id);
+    if (!$record) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Sales order not found',
+        'data' => null
+      ], 404);
     }
 
-    public function update(Request $request, $id)
-    {
-        $record = SalesOrder::find($id);
-        if (!$record) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Sales order not found',
-                'data' => null
-            ], 404);
-        }
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Sales order fetched successfully',
+      'data' => $record
+    ], 200);
+  }
 
-        DB::beginTransaction();
-        try {
-            $data = $request->except('details');
-            $details = $request->input('details', []);
+  public function store(Request $request)
+  {
+    DB::beginTransaction();
+    try {
+      $data = $request->except('details');
+      $data['created_by'] = auth()->id() ?? 1;
+      $data['updated_by'] = auth()->id() ?? 1;
+      if (!array_key_exists('version', $data)) {
+        $data['version'] = 1;
+      }
+      if (empty($data['billaddr']) && isset($data['shipaddr'])) {
+        $data['billaddr'] = $data['shipaddr'];
+      }
+      $details = $request->input('details', []);
 
-            $record->update($data);
+      $record = SalesOrder::create($data);
 
-            // Replace all details
-            $record->details()->delete();
-            foreach ($details as $detail) {
-                $detail['so_id'] = $record->id;
-                SalesOrderDetail::create($detail);
-            }
+      foreach ($details as $detail) {
+        $detail['so_id'] = $record->id;
+        SalesOrderDetail::create($detail);
+      }
 
-            DB::commit();
+      DB::commit();
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Sales order updated successfully',
-                'data' => $record->load('details')
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to update sales order',
-                'data' => null,
-                'error' => $e->getMessage()
-            ], 400);
-        }
+      return response()->json([
+        'status' => 'success',
+        'message' => 'Sales order created successfully',
+        'data' => $record->load('details')
+      ], 201);
+    } catch (\Exception $e) {
+      DB::rollBack();
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Failed to create sales order',
+        'data' => null,
+        'error' => $e->getMessage()
+      ], 400);
+    }
+  }
+
+  public function update(Request $request, $id)
+  {
+    $record = SalesOrder::find($id);
+    if (!$record) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Sales order not found',
+        'data' => null
+      ], 404);
     }
 
-    public function destroy($id)
-    {
-        $record = SalesOrder::find($id);
-        if (!$record) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Sales order not found',
-                'data' => null
-            ], 404);
-        }
+    DB::beginTransaction();
+    try {
+      $data = $request->except('details');
+      $data['updated_by'] = auth()->id() ?? 1;
+      $data['version'] = $record->version + 1;
+      if (empty($data['billaddr']) && isset($data['shipaddr'])) {
+        $data['billaddr'] = $data['shipaddr'];
+      }
+      $details = $request->input('details', []);
 
-        if ($record->isvoid) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Sales order is already voided',
-                'data' => null
-            ], 400);
-        }
+      $record->update($data);
 
-        $record->isvoid = true;
-        $record->save();
+      // Replace all details
+      $record->details()->delete();
+      foreach ($details as $detail) {
+        $detail['so_id'] = $record->id;
+        SalesOrderDetail::create($detail);
+      }
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Sales order voided successfully',
-            'data' => $record
-        ], 200);
+      DB::commit();
+
+      return response()->json([
+        'status' => 'success',
+        'message' => 'Sales order updated successfully',
+        'data' => $record->load('details')
+      ], 200);
+    } catch (\Exception $e) {
+      DB::rollBack();
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Failed to update sales order',
+        'data' => null,
+        'error' => $e->getMessage()
+      ], 400);
     }
+  }
+
+  public function destroy($id)
+  {
+    $record = SalesOrder::find($id);
+    if (!$record) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Sales order not found',
+        'data' => null
+      ], 404);
+    }
+
+    if ($record->isvoid) {
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Sales order is already voided',
+        'data' => null
+      ], 400);
+    }
+
+    $record->isvoid = true;
+    $record->save();
+
+    return response()->json([
+      'status' => 'success',
+      'message' => 'Sales order voided successfully',
+      'data' => $record
+    ], 200);
+  }
 }
