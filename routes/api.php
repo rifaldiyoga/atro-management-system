@@ -14,6 +14,8 @@ Route::middleware('auth:sanctum')->group(function () {
   Route::apiResource('sales-quotations', App\Http\Controllers\Api\SalesQuotationController::class);
   Route::apiResource('deliveries', App\Http\Controllers\Api\DeliveryController::class);
   Route::get('sales-orders/{so}/deliveries', [App\Http\Controllers\Api\DeliveryController::class, 'bySalesOrder']);
+  Route::apiResource('sales', App\Http\Controllers\Api\SaleController::class);
+  Route::get('sales-orders/{so}/sales', [App\Http\Controllers\Api\SaleController::class, 'bySalesOrder']);
   Route::get('sales-order-report/{type}', [App\Http\Controllers\Api\SalesOrderReportController::class, 'getReport']);
 });
 Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login'])->name('login');
