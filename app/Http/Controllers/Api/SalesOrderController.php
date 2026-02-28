@@ -16,6 +16,8 @@ class SalesOrderController extends Controller
     $search = request()->query('search');
     $sort = request()->query('sort', 'id');
     $direction = request()->query('direction', 'asc');
+    $status = request()->query('status');
+    $active = request()->query('active');
 
     $query = SalesOrder::with(['bp', 'srep']);
 
@@ -23,6 +25,14 @@ class SalesOrderController extends Controller
       $query->where(function ($q) use ($search) {
         $q->whereRaw('LOWER(trxno) LIKE ?', ['%' . strtolower($search) . '%']);
       });
+    }
+
+    if ($status) {
+      $query->where('status', strtoupper($status));
+    }
+
+    if ($active !== null && $active !== '') {
+      $query->where('active', filter_var($active, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true);
     }
 
     $allowedSortFields = ['id', 'trxno', 'trxdate', 'status', 'total', 'created_at'];
@@ -84,9 +94,16 @@ class SalesOrderController extends Controller
 
       $record = SalesOrder::create($data);
 
+      $dno = 1;
       foreach ($details as $detail) {
         $detail['so_id'] = $record->id;
+        $detail['dno']   = $dno++;
         SalesOrderDetail::create($detail);
+      }
+
+      // Deactivate source SQ when converting SQ → SO
+      if (!empty($data['reftype']) && !empty($data['refid'])) {
+        $this->deactivateSource($data['reftype'], $data['refid']);
       }
 
       DB::commit();
@@ -105,6 +122,21 @@ class SalesOrderController extends Controller
         'error' => $e->getMessage()
       ], 400);
     }
+  }
+
+  /**
+   * Mark the source document as converted (active=false, status='CONVERTED').
+   * Uses DB::table() to bypass any Eloquent model hooks (e.g. trxno auto-generation).
+   */
+  private function deactivateSource(string $reftype, mixed $refid): void
+  {
+    $id = (int) $refid;
+    if ($id <= 0) return;
+
+    match (strtoupper($reftype)) {
+      'SQ' => DB::table('sq')->where('id', $id)->update(['active' => false, 'status' => 'CONVERTED']),
+      default => null,
+    };
   }
 
   public function update(Request $request, $id)

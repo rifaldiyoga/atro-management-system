@@ -18,6 +18,8 @@ class SaleController extends Controller
     $sort      = request()->query('sort', 'id');
     $direction = request()->query('direction', 'asc');
     $so_id     = request()->query('so_id');
+    $status    = request()->query('status');
+    $active    = request()->query('active');
 
     $query = Sale::with(['bp', 'srep']);
 
@@ -29,6 +31,14 @@ class SaleController extends Controller
 
     if ($so_id) {
       $query->where('reftype', 'SO')->where('refid', $so_id);
+    }
+
+    if ($status) {
+      $query->where('status', strtoupper($status));
+    }
+
+    if ($active !== null && $active !== '') {
+      $query->where('active', filter_var($active, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true);
     }
 
     $allowedSortFields = ['id', 'trxno', 'trxdate', 'status', 'total', 'created_at'];
@@ -90,9 +100,16 @@ class SaleController extends Controller
 
       $record = Sale::create($data);
 
+      $dno = 1;
       foreach ($details as $detail) {
         $detail['sale_id'] = $record->id;
+        $detail['dno']     = $dno++;
         SaleDetail::create($detail);
+      }
+
+      // Deactivate source document when converting
+      if (!empty($data['reftype']) && !empty($data['refid'])) {
+        $this->deactivateSource($data['reftype'], $data['refid']);
       }
 
       DB::commit();
@@ -111,6 +128,23 @@ class SaleController extends Controller
         'error'   => $e->getMessage()
       ], 400);
     }
+  }
+
+  /**
+   * Mark the source document as converted (active=false, status='CONVERTED').
+   * Uses DB::table() to bypass any Eloquent model hooks (e.g. trxno auto-generation).
+   */
+  private function deactivateSource(string $reftype, mixed $refid): void
+  {
+    $id = (int) $refid;
+    if ($id <= 0) return;
+
+    match (strtoupper($reftype)) {
+      'SO'   => DB::table('so')->where('id', $id)->update(['active' => false, 'status' => 'CONVERTED']),
+      'SQ'   => DB::table('sq')->where('id', $id)->update(['active' => false, 'status' => 'CONVERTED']),
+      'DELI' => DB::table('deli')->where('id', $id)->update(['active' => false, 'status' => 'CONVERTED']),
+      default => null,
+    };
   }
 
   public function update(Request $request, $id)

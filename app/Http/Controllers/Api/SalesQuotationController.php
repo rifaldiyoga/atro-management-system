@@ -17,12 +17,22 @@ class SalesQuotationController extends Controller
     $search = request()->query('search');
     $sort = request()->query('sort', 'id');
     $direction = request()->query('direction', 'asc');
+    $status = request()->query('status');   // e.g. 'CONVERTED', 'OPEN'
+    $active = request()->query('active');   // '1' | '0'
     $query = SalesQuotation::with('bp');
 
     if ($search) {
       $query->where(function ($q) use ($search) {
         $q->whereRaw('LOWER(trxno) LIKE ?', ['%' . strtolower($search) . '%']);
       });
+    }
+
+    if ($status) {
+      $query->where('status', strtoupper($status));
+    }
+
+    if ($active !== null && $active !== '') {
+      $query->where('active', filter_var($active, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true);
     }
 
     $allowedSortFields = ['id', 'trxno', 'trxdate', 'status', 'total', 'created_at'];
