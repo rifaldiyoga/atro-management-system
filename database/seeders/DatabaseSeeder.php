@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
       BpAddrSeeder::class,          // bpaddr → depends on bp
       ItemSeeder::class,            // items
       ItemSupplierSeeder::class,    // itemsupplier → depends on items + bp (VEND)
+      RegSeeder::class,             // reg
     ]);
   }
 }

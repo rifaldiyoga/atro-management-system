@@ -10,6 +10,7 @@ Route::middleware('auth:sanctum')->group(function () {
   Route::apiResource('items', App\Http\Controllers\Api\ItemController::class);
   Route::apiResource('salesmen', App\Http\Controllers\Api\SalesmanController::class);
   Route::apiResource('salesmen-groups', App\Http\Controllers\Api\SalesmanGroupController::class);
+  Route::apiResource('regs', App\Http\Controllers\Api\RegController::class);
   Route::apiResource('sales-orders', App\Http\Controllers\Api\SalesOrderController::class);
   Route::apiResource('sales-quotations', App\Http\Controllers\Api\SalesQuotationController::class);
   Route::apiResource('deliveries', App\Http\Controllers\Api\DeliveryController::class);
