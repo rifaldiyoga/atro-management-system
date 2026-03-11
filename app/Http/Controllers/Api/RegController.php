@@ -80,6 +80,28 @@ class RegController extends Controller
   }
 
   /**
+   * Display the specified resource by code.
+   */
+  public function getByCode($code)
+  {
+    $reg = Reg::where('code', $code)->first();
+
+    if (!$reg) {
+      return response()->json([
+        'status'  => 'error',
+        'message' => 'Reg not found',
+        'data'    => null
+      ], 404);
+    }
+
+    return response()->json([
+      'status'  => 'success',
+      'message' => 'Reg fetched successfully',
+      'data'    => $reg
+    ], 200);
+  }
+
+  /**
    * Update the specified resource in storage.
    */
   public function update(Request $request, $id)
