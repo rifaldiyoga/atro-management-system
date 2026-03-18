@@ -5,9 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use App\Helpers\TransactionHelper;
 
-class SalesQuotation extends Model
+class PurchaseOrder extends Model
 {
-  protected $table = 'sq';
+  protected $table = 'po';
 
   protected $fillable = [
     'trxno',
@@ -40,6 +40,8 @@ class SalesQuotation extends Model
     'basefistaxamt',
     'total',
     'basetotal',
+    'dpamt',
+    'ship_id',
     'reserved_var1',
     'valid_days',
     'ship_eta',
@@ -52,17 +54,21 @@ class SalesQuotation extends Model
     'reserved_num1',
     'reserved_num2',
     'reserved_num3',
+    'isautogen',
+    'reqdtime',
     'note_emp',
     'attn',
   ];
 
   protected $casts = [
     'trxdate' => 'datetime',
+    'reqdtime' => 'datetime',
     'isdraft' => 'boolean',
     'isvoid' => 'boolean',
     'active' => 'boolean',
     'taxed' => 'boolean',
     'taxinc' => 'boolean',
+    'isautogen' => 'boolean',
     'subtotal' => 'decimal:4',
     'basesubtotal' => 'decimal:4',
     'discamt' => 'decimal:4',
@@ -72,6 +78,7 @@ class SalesQuotation extends Model
     'basefistaxamt' => 'decimal:4',
     'total' => 'decimal:4',
     'basetotal' => 'decimal:4',
+    'dpamt' => 'decimal:4',
     'reserved_num1' => 'decimal:4',
     'reserved_num2' => 'decimal:4',
     'reserved_num3' => 'decimal:4',
@@ -81,14 +88,14 @@ class SalesQuotation extends Model
   {
     static::saving(function ($model) {
       if (empty($model->trxno) || $model->trxno === 'AUTO') {
-        $model->trxno = TransactionHelper::generateTrxNo(static::class, 'SQ', $model->trxdate);
+        $model->trxno = TransactionHelper::generateTrxNo(static::class, 'PO', $model->trxdate);
       }
     });
   }
 
   public function details()
   {
-    return $this->hasMany(SalesQuotationDetail::class, 'sq_id', 'id');
+    return $this->hasMany(PurchaseOrderDetail::class, 'po_id', 'id');
   }
 
   public function bp()

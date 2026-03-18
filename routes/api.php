@@ -14,6 +14,8 @@ Route::middleware('auth:sanctum')->group(function () {
   Route::get('regs/code/{code}', [App\Http\Controllers\Api\RegController::class, 'getByCode']);
   Route::apiResource('sales-orders', App\Http\Controllers\Api\SalesOrderController::class);
   Route::apiResource('purchases', App\Http\Controllers\Api\PurchaseController::class);
+  Route::apiResource('purchase-orders', App\Http\Controllers\Api\PurchaseOrderController::class);
+  Route::apiResource('purchase-receives', App\Http\Controllers\Api\PurchaseReceiveController::class);
   Route::apiResource('sales-quotations', App\Http\Controllers\Api\SalesQuotationController::class);
   Route::apiResource('deliveries', App\Http\Controllers\Api\DeliveryController::class);
   Route::get('sales-orders/{so}/deliveries', [App\Http\Controllers\Api\DeliveryController::class, 'bySalesOrder']);

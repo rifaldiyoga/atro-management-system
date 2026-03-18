@@ -57,6 +57,7 @@ class SalesOrder extends Model
     'isautogen',
     'reqdtime',
     'note_emp',
+    'attn',
   ];
 
   protected $casts = [

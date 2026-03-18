@@ -18,6 +18,7 @@ class ItemController extends Controller
         $sort      = request()->query('sort', 'id');
         $direction = request()->query('direction', 'asc');
         $active    = request()->query('active');
+        $itemtype  = request()->query('itemtype');
 
         $query = Item::query();
 
@@ -32,7 +33,12 @@ class ItemController extends Controller
             $query->where('active', filter_var($active, FILTER_VALIDATE_BOOLEAN));
         }
 
-        $allowedSortFields = ['id', 'code', 'name', 'unit', 'price', 'active', 'created_at'];
+        $allowedItemTypes = ['GOOD', 'SERV', 'MFG', 'RAW'];
+        if ($itemtype && in_array(strtoupper($itemtype), $allowedItemTypes)) {
+            $query->where('itemtype', strtoupper($itemtype));
+        }
+
+        $allowedSortFields = ['id', 'code', 'name', 'unit', 'price', 'active', 'itemtype', 'created_at'];
         if (!in_array($sort, $allowedSortFields)) {
             $sort = 'id';
         }
@@ -84,6 +90,19 @@ class ItemController extends Controller
                 $data['code'] = null; // Let the model booted event handle it
             }
 
+            // Validate and normalise itemtype
+            $allowedItemTypes = ['GOOD', 'SERV', 'MFG', 'RAW'];
+            if (isset($data['itemtype'])) {
+                $data['itemtype'] = strtoupper($data['itemtype']);
+                if (!in_array($data['itemtype'], $allowedItemTypes)) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Invalid itemtype. Allowed values: GOOD, SERV, MFG, RAW',
+                        'data'    => null,
+                    ], 422);
+                }
+            }
+
             $item = Item::create($data);
 
             return response()->json([
@@ -117,6 +136,19 @@ class ItemController extends Controller
 
             if (isset($data['code']) && $data['code'] === 'AUTO') {
                 unset($data['code']); // Don't overwrite code on update
+            }
+
+            // Validate and normalise itemtype
+            $allowedItemTypes = ['GOOD', 'SERV', 'MFG', 'RAW'];
+            if (isset($data['itemtype'])) {
+                $data['itemtype'] = strtoupper($data['itemtype']);
+                if (!in_array($data['itemtype'], $allowedItemTypes)) {
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => 'Invalid itemtype. Allowed values: GOOD, SERV, MFG, RAW',
+                        'data'    => null,
+                    ], 422);
+                }
             }
 
             $item->update($data);

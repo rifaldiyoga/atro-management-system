@@ -57,6 +57,7 @@ return new class extends Migration
       $table->boolean('isautogen')->default(false);
       $table->timestampTz('reqdtime')->nullable();
       $table->text('note_emp')->nullable();
+      $table->string('attn')->nullable();
 
       $table->timestampsTz();
     });

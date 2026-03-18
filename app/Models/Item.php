@@ -23,6 +23,7 @@ class Item extends Model
         'discexp',
         'lastpurcprice',
         'description',
+        'itemtype',
         'active',
         'photo_url',
     ];

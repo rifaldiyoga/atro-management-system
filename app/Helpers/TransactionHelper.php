@@ -5,28 +5,36 @@ namespace App\Helpers;
 class TransactionHelper
 {
   /**
-   * Generate an auto-incrementing transaction number
+   * Generate an auto-incrementing transaction number.
    *
-   * @param string $modelClass The fully qualified class name of the Eloquent model.
-   * @param string $prefix The transaction prefix (e.g., 'SQ', 'SO').
-   * @param string|null $trxdate The transaction date to determine the YM component.
-   * @return string The generated transaction number.
+   * Format: {sequence}/AIG/{prefix}/{month}/{year}
+   * Example: 439/AIG/PO/12/2025
+   *
+   * @param string      $modelClass The fully qualified Eloquent model class name.
+   * @param string      $prefix     The document type prefix (e.g. 'PO', 'SO', 'SQ').
+   * @param string|null $trxdate    The transaction date to derive month/year from.
+   * @return string
    */
   public static function generateTrxNo($modelClass, $prefix, $trxdate = null)
   {
-    $yM = $trxdate ? date('Ym', strtotime($trxdate)) : date('Ym');
-    $fullPrefix = $prefix . '-' . $yM . '-';
+    $date  = $trxdate ? strtotime($trxdate) : time();
+    $month = (int) date('m', $date);   // e.g. 12
+    $year  = (int) date('Y', $date);   // e.g. 2025
 
-    $lastRecord = $modelClass::where('trxno', 'like', $fullPrefix . '%')
-      ->orderBy('trxno', 'desc')
+    // Fixed suffix: AIG/{prefix}/{month}/{year}
+    $suffix = 'AIG/' . $prefix . '/' . $month . '/' . $year;
+
+    // Find the last record with this suffix and extract its sequence number
+    $lastRecord = $modelClass::where('trxno', 'like', '%/' . $suffix)
+      ->orderByRaw("CAST(SPLIT_PART(trxno, '/', 1) AS INTEGER) DESC")
       ->first();
 
-    if ($lastRecord && preg_match('/-(\d{4})$/', $lastRecord->trxno, $matches)) {
-      $newNumber = str_pad((int)$matches[1] + 1, 4, '0', STR_PAD_LEFT);
+    if ($lastRecord && preg_match('/^(\d+)\//', $lastRecord->trxno, $matches)) {
+      $newNumber = (int) $matches[1] + 1;
     } else {
-      $newNumber = '0001';
+      $newNumber = 1;
     }
 
-    return $fullPrefix . $newNumber;
+    return $newNumber . '/' . $suffix;
   }
 }
