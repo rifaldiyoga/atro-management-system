@@ -43,6 +43,7 @@ class Delivery extends Model
     'reserved_num2',
     'reserved_num3',
     'isautogen',
+    'attn',
   ];
 
   protected $casts = [

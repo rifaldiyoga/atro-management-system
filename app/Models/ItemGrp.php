@@ -22,4 +22,40 @@ class ItemGrp extends Model
     protected $casts = [
         'active' => 'boolean',
     ];
+
+    /**
+     * The "booted" method of the model.
+     *
+     * This method is called when the model is bootstrapped.
+     * We use the 'creating' event to generate the code before saving a new record.
+     */
+    protected static function booted()
+    {
+        static::creating(function ($itemGrp) {
+            // Check if code is already set to avoid overwriting it
+            if (empty($itemGrp->code) || $itemGrp->code === 'AUTO') {
+                $itemGrp->code = static::generateCode();
+            }
+        });
+    }
+
+    /**
+     * Generate a unique, incrementing code.
+     * Format: 000000001, 000000002, etc.
+     *
+     * @return string
+     */
+    public static function generateCode(): string
+    {
+        // Find the item with the highest ID to determine the next number.
+        $lastItem = self::orderBy('id', 'desc')->first();
+
+        $nextNumber = 1; // Default to 1 if no items exist yet.
+
+        if ($lastItem) {
+            $nextNumber = $lastItem->id + 1;
+        }
+
+        return str_pad($nextNumber, 9, '0', STR_PAD_LEFT);
+    }
 }

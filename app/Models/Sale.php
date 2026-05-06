@@ -59,6 +59,7 @@ class Sale extends Model
     'isautogen',
     'reqdtime',
     'note_emp',
+    'attn',
   ];
 
   protected $casts = [

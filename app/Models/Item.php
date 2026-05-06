@@ -23,6 +23,7 @@ class Item extends Model
         'discexp',
         'lastpurcprice',
         'description',
+        'itgrp_id',
         'itemtype',
         'active',
         'photo_url',
@@ -86,5 +87,10 @@ class Item extends Model
     public function suppliers()
     {
         return $this->hasMany(ItemSupplier::class, 'item_id');
+    }
+
+    public function itemGrp()
+    {
+        return $this->belongsTo(ItemGrp::class, 'itgrp_id');
     }
 }
