@@ -87,4 +87,9 @@ class Delivery extends Model
   {
     return $this->belongsTo(SalesOrder::class, 'refid', 'id');
   }
+
+  public function attachments()
+  {
+    return $this->hasMany(Attachment::class, 'refid', 'id')->where('reftype', 'DELI');
+  }
 }

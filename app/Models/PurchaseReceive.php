@@ -43,9 +43,6 @@ class PurchaseReceive extends Model
     'dpamt',
     'ship_id',
     'reserved_var1',
-    'valid_days',
-    'ship_eta',
-    'pay_due_period',
     'reserved_var2',
     'reserved_var3',
     'reserved_int1',
@@ -106,5 +103,10 @@ class PurchaseReceive extends Model
   public function srep()
   {
     return $this->belongsTo(Salesman::class, 'srep_id', 'id');
+  }
+
+  public function attachments()
+  {
+    return $this->hasMany(Attachment::class, 'refid', 'id')->where('reftype', 'PRCV');
   }
 }

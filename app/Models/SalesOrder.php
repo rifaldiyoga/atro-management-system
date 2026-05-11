@@ -107,4 +107,9 @@ class SalesOrder extends Model
   {
     return $this->belongsTo(Salesman::class, 'srep_id', 'id');
   }
+
+  public function attachments()
+  {
+    return $this->hasMany(Attachment::class, 'refid', 'id')->where('reftype', 'SO');
+  }
 }

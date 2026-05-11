@@ -8,6 +8,7 @@ use App\Models\SaleDetail;
 use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class SaleController extends Controller
 {
@@ -67,7 +68,7 @@ class SaleController extends Controller
 
   public function show($id)
   {
-    $record = Sale::with(['details.item', 'bp', 'srep', 'salesOrder'])->find($id);
+    $record = Sale::with(['details.item', 'bp', 'srep', 'salesOrder', 'attachments'])->find($id);
     if (!$record) {
       return response()->json([
         'status'  => 'error',
@@ -87,7 +88,12 @@ class SaleController extends Controller
   {
     DB::beginTransaction();
     try {
-      $data = $request->except('details');
+      $inputData = $request->has('payload')
+        ? json_decode($request->input('payload'), true)
+        : $request->all();
+      $data    = collect($inputData)->except('details')->toArray();
+      $details = $inputData['details'] ?? [];
+
       $data['created_by'] = auth()->id() ?? 1;
       $data['updated_by'] = auth()->id() ?? 1;
       if (!array_key_exists('version', $data)) {
@@ -96,7 +102,6 @@ class SaleController extends Controller
       if (empty($data['billaddr']) && isset($data['shipaddr'])) {
         $data['billaddr'] = $data['shipaddr'];
       }
-      $details = $request->input('details', []);
 
       $record = Sale::create($data);
 
@@ -112,12 +117,26 @@ class SaleController extends Controller
         $this->deactivateSource($data['reftype'], $data['refid']);
       }
 
+      if ($request->hasFile('attachments')) {
+        foreach ($request->file('attachments') as $file) {
+          $path = $file->store('attachments', 'public');
+          \App\Models\Attachment::create([
+            'reftype'    => 'SALE',
+            'refid'      => $record->id,
+            'bucket'     => 'public',
+            'objkey'     => $path,
+            'caption'    => $file->getClientOriginalName(),
+            'created_by' => auth()->id() ?? 1,
+          ]);
+        }
+      }
+
       DB::commit();
 
       return response()->json([
         'status'  => 'success',
         'message' => 'Sale created successfully',
-        'data'    => $record->load('details')
+        'data'    => $record->load('details', 'attachments')
       ], 201);
     } catch (\Exception $e) {
       DB::rollBack();
@@ -160,13 +179,17 @@ class SaleController extends Controller
 
     DB::beginTransaction();
     try {
-      $data = $request->except('details');
+      $inputData = $request->has('payload')
+        ? json_decode($request->input('payload'), true)
+        : $request->all();
+      $data    = collect($inputData)->except('details')->toArray();
+      $details = $inputData['details'] ?? [];
+
       $data['updated_by'] = auth()->id() ?? 1;
       $data['version']    = $record->version + 1;
       if (empty($data['billaddr']) && isset($data['shipaddr'])) {
         $data['billaddr'] = $data['shipaddr'];
       }
-      $details = $request->input('details', []);
 
       $record->update($data);
 
@@ -177,12 +200,38 @@ class SaleController extends Controller
         SaleDetail::create($detail);
       }
 
+      if ($request->hasFile('attachments')) {
+        foreach ($request->file('attachments') as $file) {
+          $path = $file->store('attachments', 'public');
+          \App\Models\Attachment::create([
+            'reftype'    => 'SALE',
+            'refid'      => $record->id,
+            'bucket'     => 'public',
+            'objkey'     => $path,
+            'caption'    => $file->getClientOriginalName(),
+            'created_by' => auth()->id() ?? 1,
+          ]);
+        }
+      }
+
+      if ($request->has('sync_attachments')) {
+        $keptAttachments = $request->input('kept_attachments', []);
+        $existingAttachments = \App\Models\Attachment::where('reftype', 'SALE')
+          ->where('refid', $record->id)->get();
+        foreach ($existingAttachments as $attachment) {
+          if (!in_array($attachment->id, $keptAttachments)) {
+            if ($attachment->objkey) Storage::disk('public')->delete($attachment->objkey);
+            $attachment->delete();
+          }
+        }
+      }
+
       DB::commit();
 
       return response()->json([
         'status'  => 'success',
         'message' => 'Sale updated successfully',
-        'data'    => $record->load('details')
+        'data'    => $record->load('details', 'attachments')
       ], 200);
     } catch (\Exception $e) {
       DB::rollBack();

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Helpers\TransactionHelper;
+use App\Models\Attachment;
 use App\Models\SaleDetail;
 
 class Sale extends Model
@@ -114,5 +115,10 @@ class Sale extends Model
   public function salesOrder()
   {
     return $this->belongsTo(SalesOrder::class, 'refid', 'id');
+  }
+
+  public function attachments()
+  {
+    return $this->hasMany(Attachment::class, 'refid', 'id')->where('reftype', 'SALE');
   }
 }

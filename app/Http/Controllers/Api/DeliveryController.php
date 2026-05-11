@@ -8,6 +8,7 @@ use App\Models\DeliveryDetail;
 use App\Models\SalesOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class DeliveryController extends Controller
 {
@@ -67,7 +68,7 @@ class DeliveryController extends Controller
 
   public function show($id)
   {
-    $record = Delivery::with(['details.item', 'bp', 'srep', 'salesOrder'])->find($id);
+    $record = Delivery::with(['details.item', 'bp', 'srep', 'salesOrder', 'attachments'])->find($id);
     if (!$record) {
       return response()->json([
         'status'  => 'error',
@@ -87,7 +88,11 @@ class DeliveryController extends Controller
   {
     DB::beginTransaction();
     try {
-      $data = $request->except('details');
+      $inputData = $request->has('payload')
+          ? json_decode($request->input('payload'), true)
+          : $request->all();
+
+      $data = collect($inputData)->except('details')->toArray();
       $data['created_by'] = auth()->id() ?? 1;
       $data['updated_by'] = auth()->id() ?? 1;
       if (!array_key_exists('version', $data)) {
@@ -96,7 +101,7 @@ class DeliveryController extends Controller
       if (empty($data['billaddr']) && isset($data['shipaddr'])) {
         $data['billaddr'] = $data['shipaddr'];
       }
-      $details = $request->input('details', []);
+      $details = $inputData['details'] ?? [];
 
       $record = Delivery::create($data);
 
@@ -105,6 +110,20 @@ class DeliveryController extends Controller
         $detail['deli_id'] = $record->id;
         $detail['dno']     = $dno++;
         DeliveryDetail::create($detail);
+      }
+
+      if ($request->hasFile('attachments')) {
+        foreach ($request->file('attachments') as $file) {
+          $path = $file->store('attachments', 'public');
+          \App\Models\Attachment::create([
+            'reftype' => 'DELI',
+            'refid' => $record->id,
+            'bucket' => 'public',
+            'objkey' => $path,
+            'caption' => $file->getClientOriginalName(),
+            'created_by' => auth()->id() ?? 1,
+          ]);
+        }
       }
 
       // Deactivate source document when converting
@@ -117,7 +136,7 @@ class DeliveryController extends Controller
       return response()->json([
         'status'  => 'success',
         'message' => 'Delivery created successfully',
-        'data'    => $record->load('details')
+        'data'    => $record->load('details', 'attachments')
       ], 201);
     } catch (\Exception $e) {
       DB::rollBack();
@@ -159,13 +178,17 @@ class DeliveryController extends Controller
 
     DB::beginTransaction();
     try {
-      $data = $request->except('details');
+      $inputData = $request->has('payload')
+          ? json_decode($request->input('payload'), true)
+          : $request->all();
+
+      $data = collect($inputData)->except('details')->toArray();
       $data['updated_by'] = auth()->id() ?? 1;
       $data['version']    = $record->version + 1;
       if (empty($data['billaddr']) && isset($data['shipaddr'])) {
         $data['billaddr'] = $data['shipaddr'];
       }
-      $details = $request->input('details', []);
+      $details = $inputData['details'] ?? [];
 
       $record->update($data);
 
@@ -176,12 +199,42 @@ class DeliveryController extends Controller
         DeliveryDetail::create($detail);
       }
 
+      if ($request->hasFile('attachments')) {
+        foreach ($request->file('attachments') as $file) {
+          $path = $file->store('attachments', 'public');
+          \App\Models\Attachment::create([
+            'reftype' => 'DELI',
+            'refid' => $record->id,
+            'bucket' => 'public',
+            'objkey' => $path,
+            'caption' => $file->getClientOriginalName(),
+            'created_by' => auth()->id() ?? 1,
+          ]);
+        }
+      }
+
+      if ($request->has('sync_attachments')) {
+        $keptAttachments = $request->input('kept_attachments', []);
+        $existingAttachments = \App\Models\Attachment::where('reftype', 'DELI')
+            ->where('refid', $record->id)
+            ->get();
+
+        foreach ($existingAttachments as $attachment) {
+          if (!in_array($attachment->id, $keptAttachments)) {
+            if ($attachment->objkey) {
+              Storage::disk('public')->delete($attachment->objkey);
+            }
+            $attachment->delete();
+          }
+        }
+      }
+
       DB::commit();
 
       return response()->json([
         'status'  => 'success',
         'message' => 'Delivery updated successfully',
-        'data'    => $record->load('details')
+        'data'    => $record->load('details', 'attachments')
       ], 200);
     } catch (\Exception $e) {
       DB::rollBack();

@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->string('itemtype')->default('GOOD')->after('description'); // GOOD, SERV, MFG, RAW
+            if (!Schema::hasColumn('items', 'itemtype')) {
+                $table->string('itemtype')->default('GOOD')->after('description'); // GOOD, SERV, MFG, RAW
+            }
         });
     }
 

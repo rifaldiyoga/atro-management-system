@@ -61,7 +61,7 @@ class SalesQuotationController extends Controller
 
   public function show($id)
   {
-    $record = SalesQuotation::with(['details', 'bp', 'srep'])->find($id);
+    $record = SalesQuotation::with(['details', 'bp', 'srep', 'attachments'])->find($id);
     if (!$record) {
       return response()->json([
         'status' => 'error',
@@ -81,7 +81,11 @@ class SalesQuotationController extends Controller
   {
     DB::beginTransaction();
     try {
-      $data = $request->except('details');
+      $inputData = $request->has('payload') 
+          ? json_decode($request->input('payload'), true) 
+          : $request->all();
+
+      $data = collect($inputData)->except('details')->toArray();
       $data['created_by'] = auth()->id() ?? 1;
       $data['updated_by'] = auth()->id() ?? 1;
       if (!array_key_exists('version', $data)) {
@@ -90,7 +94,7 @@ class SalesQuotationController extends Controller
       if (empty($data['billaddr']) && isset($data['shipaddr'])) {
         $data['billaddr'] = $data['shipaddr'];
       }
-      $details = $request->input('details', []);
+      $details = $inputData['details'] ?? [];
 
       $record = SalesQuotation::create($data);
 
@@ -101,12 +105,26 @@ class SalesQuotationController extends Controller
         SalesQuotationDetail::create($detail);
       }
 
+      if ($request->hasFile('attachments')) {
+        foreach ($request->file('attachments') as $file) {
+          $path = $file->store('attachments', 'public');
+          \App\Models\Attachment::create([
+            'reftype' => 'SQ',
+            'refid' => $record->id,
+            'bucket' => 'public',
+            'objkey' => $path,
+            'caption' => $file->getClientOriginalName(),
+            'created_by' => auth()->id() ?? 1,
+          ]);
+        }
+      }
+
       DB::commit();
 
       return response()->json([
         'status' => 'success',
         'message' => 'Sales quotation created successfully',
-        'data' => $record->load('details')
+        'data' => $record->load('details', 'attachments')
       ], 201);
     } catch (\Exception $e) {
       DB::rollBack();
@@ -132,13 +150,17 @@ class SalesQuotationController extends Controller
 
     DB::beginTransaction();
     try {
-      $data = $request->except('details');
+      $inputData = $request->has('payload') 
+          ? json_decode($request->input('payload'), true) 
+          : $request->all();
+
+      $data = collect($inputData)->except('details')->toArray();
       $data['updated_by'] = auth()->id() ?? 1;
       $data['version'] = $record->version + 1;
       if (empty($data['billaddr']) && isset($data['shipaddr'])) {
         $data['billaddr'] = $data['shipaddr'];
       }
-      $details = $request->input('details', []);
+      $details = $inputData['details'] ?? [];
 
       $record->update($data);
 
@@ -149,12 +171,42 @@ class SalesQuotationController extends Controller
         SalesQuotationDetail::create($detail);
       }
 
+      if ($request->hasFile('attachments')) {
+        foreach ($request->file('attachments') as $file) {
+          $path = $file->store('attachments', 'public');
+          \App\Models\Attachment::create([
+            'reftype' => 'SQ',
+            'refid' => $record->id,
+            'bucket' => 'public',
+            'objkey' => $path,
+            'caption' => $file->getClientOriginalName(),
+            'created_by' => auth()->id() ?? 1,
+          ]);
+        }
+      }
+
+      if ($request->has('sync_attachments')) {
+        $keptAttachments = $request->input('kept_attachments', []);
+        $existingAttachments = \App\Models\Attachment::where('reftype', 'SQ')
+            ->where('refid', $record->id)
+            ->get();
+            
+        foreach ($existingAttachments as $attachment) {
+            if (!in_array($attachment->id, $keptAttachments)) {
+                if ($attachment->objkey) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($attachment->objkey);
+                }
+                $attachment->delete();
+            }
+        }
+      }
+
       DB::commit();
 
       return response()->json([
         'status' => 'success',
         'message' => 'Sales quotation updated successfully',
-        'data' => $record->load('details')
+        'data' => $record->load('details', 'attachments')
       ], 200);
     } catch (\Exception $e) {
       DB::rollBack();
